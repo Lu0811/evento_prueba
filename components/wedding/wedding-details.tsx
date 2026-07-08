@@ -1,47 +1,52 @@
 import { CalendarHeart, Church, Wine, Shirt, Gift, Clock, MapPin } from 'lucide-react'
+import type { WeddingEvent } from '@/types/event'
 import { SectionHeading } from './section-heading'
 import { Reveal } from './reveal'
-import { wedding } from '@/lib/wedding'
+import { formatEventDate } from '@/lib/event-format'
 
-const details = [
-  {
-    icon: Church,
-    title: 'Ceremony',
-    lines: ['3:00 PM', 'Kenroku Garden Pavilion', 'Outdoor garden terrace'],
-  },
-  {
-    icon: Wine,
-    title: 'Reception',
-    lines: ['6:00 PM until late', 'The Linen Hall', 'Dinner, toasts & dancing'],
-  },
-  {
-    icon: Shirt,
-    title: 'Dress Code',
-    lines: ['Garden formal', 'Soft, earthy tones', 'Comfortable footwear advised'],
-  },
-  {
-    icon: Clock,
-    title: 'Schedule',
-    lines: ['Arrival — 2:30 PM', 'Ceremony — 3:00 PM', 'Reception — 6:00 PM'],
-  },
-  {
-    icon: Gift,
-    title: 'Gifts',
-    lines: [
-      'Your presence is the gift',
-      'A contribution to our home',
-      'is warmly appreciated',
-    ],
-  },
-  {
-    icon: CalendarHeart,
-    title: 'The Date',
-    lines: [wedding.displayDate, 'Saturday afternoon', 'Kanazawa, Japan'],
-  },
-]
+const fallbackVenue = 'Kenroku Garden Pavilion'
+const fallbackLocation = 'Kanazawa, Japan'
 
-export function WeddingDetails() {
-  const mapQuery = encodeURIComponent(`${wedding.venue}, ${wedding.location}`)
+export function WeddingDetails({ event }: { event: WeddingEvent }) {
+  const venue = event.venue ?? fallbackVenue
+  const location = event.location ?? fallbackLocation
+  const mapQuery = encodeURIComponent(`${venue}, ${location}`)
+  const details = [
+    {
+      icon: Church,
+      title: 'Ceremony',
+      lines: ['3:00 PM', venue, 'Outdoor garden terrace'],
+    },
+    {
+      icon: Wine,
+      title: 'Reception',
+      lines: ['6:00 PM until late', 'The Linen Hall', 'Dinner, toasts & dancing'],
+    },
+    {
+      icon: Shirt,
+      title: 'Dress Code',
+      lines: ['Garden formal', 'Soft, earthy tones', 'Comfortable footwear advised'],
+    },
+    {
+      icon: Clock,
+      title: 'Schedule',
+      lines: ['Arrival — 2:30 PM', 'Ceremony — 3:00 PM', 'Reception — 6:00 PM'],
+    },
+    {
+      icon: Gift,
+      title: 'Gifts',
+      lines: [
+        'Your presence is the gift',
+        'A contribution to our home',
+        'is warmly appreciated',
+      ],
+    },
+    {
+      icon: CalendarHeart,
+      title: 'The Date',
+      lines: [formatEventDate(event.event_date), 'Saturday afternoon', location],
+    },
+  ]
 
   return (
     <section id="details" className="bg-secondary/40 py-24 md:py-32">
@@ -80,9 +85,9 @@ export function WeddingDetails() {
               </span>
               <h3 className="font-serif text-2xl font-light text-foreground">How to find us</h3>
               <p className="leading-relaxed text-muted-foreground">
-                {wedding.venue}
+                {venue}
                 <br />
-                {wedding.location}
+                {location}
               </p>
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`}

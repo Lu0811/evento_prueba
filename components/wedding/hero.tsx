@@ -2,7 +2,8 @@
 
 import { motion } from 'motion/react'
 import { ChevronDown } from 'lucide-react'
-import { wedding } from '@/lib/wedding'
+import type { WeddingEvent } from '@/types/event'
+import { formatEventDate, getEventQuote, splitEventTitle } from '@/lib/event-format'
 import { useCountdown } from './use-countdown'
 
 const fadeUp = {
@@ -14,8 +15,10 @@ const fadeUp = {
   }),
 }
 
-export function Hero() {
-  const time = useCountdown(wedding.date)
+export function Hero({ event }: { event: WeddingEvent }) {
+  const time = useCountdown(event.event_date)
+  const [firstName, secondName] = splitEventTitle(event.title)
+  const coverImage = event.cover_image ?? '/images/hero.png'
 
   const units = [
     { label: 'Days', value: time?.days },
@@ -28,8 +31,8 @@ export function Hero() {
     <section id="home" className="relative flex min-h-svh items-center justify-center overflow-hidden">
       <div className="absolute inset-0">
         <img
-          src="/images/hero.png"
-          alt="Aiko and Elias walking through a serene garden"
+          src={coverImage}
+          alt={event.title}
           className="h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-foreground/40 via-foreground/25 to-foreground/50" />
@@ -53,9 +56,9 @@ export function Hero() {
           animate="show"
           className="mt-6 text-balance font-serif text-6xl font-light leading-none tracking-tight sm:text-7xl md:text-8xl"
         >
-          {wedding.bride}
+          {firstName}
           <span className="mx-3 italic text-background/70">&amp;</span>
-          {wedding.groom}
+          {secondName}
         </motion.h1>
 
         <motion.div
@@ -66,7 +69,7 @@ export function Hero() {
           className="mt-6 flex items-center gap-4 text-sm font-light uppercase tracking-[0.3em] text-background/90"
         >
           <span className="h-px w-8 bg-background/50" aria-hidden="true" />
-          {wedding.displayDate}
+          {formatEventDate(event.event_date)}
           <span className="h-px w-8 bg-background/50" aria-hidden="true" />
         </motion.div>
 
@@ -77,7 +80,7 @@ export function Hero() {
           animate="show"
           className="mt-8 max-w-md text-balance font-serif text-xl font-light italic leading-relaxed text-background/90"
         >
-          {`"${wedding.quote}"`}
+          {`"${getEventQuote(event)}"`}
         </motion.p>
 
         <motion.div

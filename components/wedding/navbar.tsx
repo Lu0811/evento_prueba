@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Menu, X } from 'lucide-react'
-import { navLinks, wedding } from '@/lib/wedding'
+import type { WeddingEvent } from '@/types/event'
+import { navLinks } from '@/lib/navigation'
+import { getEventHashtag, getEventMonogram } from '@/lib/event-format'
 import { cn } from '@/lib/utils'
 
-export function Navbar() {
+export function Navbar({ event }: { event: WeddingEvent }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
 
@@ -24,7 +26,7 @@ export function Navbar() {
     }
   }, [open])
 
-  const monogram = `${wedding.bride[0]} & ${wedding.groom[0]}`
+  const monogram = getEventMonogram(event.title)
 
   return (
     <header
@@ -125,7 +127,7 @@ export function Navbar() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-auto text-sm text-muted-foreground">{wedding.hashtag}</p>
+              <p className="mt-auto text-sm text-muted-foreground">{getEventHashtag(event)}</p>
             </motion.div>
           </motion.div>
         ) : null}

@@ -4,37 +4,52 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Heart, Check } from 'lucide-react'
 import { toast } from 'sonner'
+import type { WeddingEvent, WeddingMessage } from '@/types/event'
 import { SectionHeading } from './section-heading'
 import { Reveal } from './reveal'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { useEventMessages } from '@/hooks/use-event-messages'
+import { createGuestMessage } from '@/services/messages'
 
-export function Rsvp() {
+export function Rsvp({ event, initialMessages }: { event: WeddingEvent; initialMessages: WeddingMessage[] }) {
   const [attendance, setAttendance] = useState('yes')
   const [guests, setGuests] = useState('1')
   const [submitted, setSubmitted] = useState(false)
   const [pending, setPending] = useState(false)
+  const { messages } = useEventMessages(event.id, initialMessages)
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
     const data = new FormData(form)
-    if (!data.get('name') || !data.get('email')) {
-      toast.error('Please share your name and email.')
+    const name = String(data.get('name') ?? '').trim()
+    const message = String(data.get('message') ?? '').trim()
+
+    if (!name || !message) {
+      toast.error('Please share your name and a note.')
       return
     }
+
     setPending(true)
-    setTimeout(() => {
-      setPending(false)
+
+    try {
+      await createGuestMessage(event.id, name, message)
       setSubmitted(true)
       toast.success(
         attendance === 'yes'
           ? 'Wonderful! We can’t wait to celebrate with you.'
           : 'Thank you for letting us know — you’ll be missed.',
       )
-    }, 900)
+      form.reset()
+    } catch (error) {
+      console.error(error)
+      toast.error('We could not save your note right now. Please try again.')
+    } finally {
+      setPending(false)
+    }
   }
 
   return (
@@ -66,6 +81,23 @@ export function Rsvp() {
                     Thank you for responding. We’ll be in touch closer to the day with any final
                     details.
                   </p>
+                  {messages.length > 0 ? (
+                    <div className="mt-4 w-full max-w-xl rounded-2xl border border-border/60 bg-background/70 p-4 text-left">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        Recent guest notes
+                      </p>
+                      <div className="mt-3 grid gap-3">
+                        {messages.slice(0, 3).map((message) => (
+                          <div key={message.id} className="rounded-xl border border-border/50 bg-card px-4 py-3">
+                            <p className="font-serif text-base font-light text-foreground">{message.message}</p>
+                            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                              {message.guest_name}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setSubmitted(false)}

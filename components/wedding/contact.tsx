@@ -1,9 +1,9 @@
 import { MessageCircle, Mail, AtSign, MapPin } from 'lucide-react'
+import type { WeddingEvent } from '@/types/event'
 import { SectionHeading } from './section-heading'
 import { Reveal } from './reveal'
-import { wedding } from '@/lib/wedding'
 
-const channels = [
+const baseChannels = [
   {
     icon: MessageCircle,
     label: 'WhatsApp',
@@ -22,17 +22,21 @@ const channels = [
     value: '@aikoandelias',
     href: 'https://instagram.com',
   },
-  {
-    icon: MapPin,
-    label: 'Location',
-    value: wedding.location,
-    href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      `${wedding.venue}, ${wedding.location}`,
-    )}`,
-  },
 ]
 
-export function Contact() {
+export function Contact({ event }: { event: WeddingEvent }) {
+  const location = event.location ?? 'Kanazawa, Japan'
+  const venue = event.venue ?? 'Kenroku Garden Pavilion'
+  const channels = [
+    ...baseChannels,
+    {
+      icon: MapPin,
+      label: 'Location',
+      value: location,
+      href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${venue}, ${location}`)}`,
+    },
+  ]
+
   return (
     <section id="contact" className="bg-background py-24 md:py-32">
       <div className="mx-auto max-w-5xl px-5 md:px-8">

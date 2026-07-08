@@ -1,38 +1,48 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { X, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import type { WeddingEvent, WeddingPhoto } from '@/types/event'
+import { useEventPhotos } from '@/hooks/use-event-photos'
 import { SectionHeading } from './section-heading'
 import { cn } from '@/lib/utils'
 
 type Category = 'All' | 'Portraits' | 'Details' | 'Moments'
 
-type Photo = {
-  src: string
-  alt: string
+const categories: Category[] = ['All', 'Portraits', 'Details', 'Moments']
+
+type GalleryPhoto = WeddingPhoto & {
   category: Exclude<Category, 'All'>
 }
 
-const photos: Photo[] = [
-  { src: '/images/gallery-2.png', alt: 'Bride holding a dried-flower bouquet', category: 'Portraits' },
-  { src: '/images/gallery-1.png', alt: 'Minimalist wedding table setting', category: 'Details' },
-  { src: '/images/gallery-4.png', alt: 'Couple embracing in golden light', category: 'Moments' },
-  { src: '/images/gallery-3.png', alt: 'Wedding venue interior with wood beams', category: 'Details' },
-  { src: '/images/gallery-6.png', alt: 'Guests at an outdoor dinner at dusk', category: 'Moments' },
-  { src: '/images/gallery-7.png', alt: 'Hands with wedding rings on linen', category: 'Details' },
-  { src: '/images/story-wedding.png', alt: 'Ceremony arch with linen drapes', category: 'Moments' },
-  { src: '/images/gallery-5.png', alt: 'Minimalist naked wedding cake', category: 'Details' },
-  { src: '/images/story-proposal.png', alt: 'Engagement ring on folded linen', category: 'Portraits' },
-]
+function getPhotoCategory(photo: WeddingPhoto): Exclude<Category, 'All'> {
+  const haystack = `${photo.caption ?? ''} ${photo.storage_path}`.toLowerCase()
 
-const categories: Category[] = ['All', 'Portraits', 'Details', 'Moments']
+  if (haystack.includes('portrait')) return 'Portraits'
+  if (haystack.includes('detail')) return 'Details'
+  return 'Moments'
+}
 
-export function Gallery() {
+export function Gallery({ event, initialPhotos }: { event: WeddingEvent; initialPhotos: WeddingPhoto[] }) {
   const [active, setActive] = useState<Category>('All')
   const [lightbox, setLightbox] = useState<number | null>(null)
+  const { photos } = useEventPhotos(event.id, initialPhotos)
 
-  const visible = active === 'All' ? photos : photos.filter((p) => p.category === active)
+  const visible = useMemo(() => {
+    const mapped: GalleryPhoto[] = photos.map((photo) => ({
+      ...photo,
+      category: getPhotoCategory(photo),
+    }))
+
+    return active === 'All' ? mapped : mapped.filter((photo) => photo.category === active)
+  }, [active, photos])
+
+  useEffect(() => {
+    if (lightbox !== null && lightbox >= visible.length) {
+      setLightbox(null)
+    }
+  }, [lightbox, visible.length])
 
   const close = () => setLightbox(null)
   const show = (delta: number) =>
@@ -73,18 +83,18 @@ export function Gallery() {
             <motion.button
               layout
               type="button"
-              key={photo.src}
+              key={photo.id}
               onClick={() => setLightbox(i)}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
               transition={{ duration: 0.6, delay: (i % 3) * 0.08 }}
               className="group relative block w-full overflow-hidden rounded-3xl ring-1 ring-border/60"
-              aria-label={`Open ${photo.alt}`}
+              aria-label={`Open ${photo.caption ?? event.title}`}
             >
               <img
-                src={photo.src || '/placeholder.svg'}
-                alt={photo.alt}
+                src={photo.image_url || '/placeholder.svg'}
+                alt={photo.caption ?? event.title}
                 loading="lazy"
                 className="w-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
@@ -128,9 +138,9 @@ export function Gallery() {
               <ChevronLeft className="size-6" />
             </button>
             <motion.img
-              key={visible[lightbox].src}
-              src={visible[lightbox].src || '/placeholder.svg'}
-              alt={visible[lightbox].alt}
+              key={visible[lightbox].image_url}
+              src={visible[lightbox].image_url || '/placeholder.svg'}
+              alt={visible[lightbox].caption ?? event.title}
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}

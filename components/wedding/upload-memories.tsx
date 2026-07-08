@@ -4,25 +4,29 @@ import { useCallback, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { UploadCloud, Camera, X, ImageIcon, Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import type { WeddingEvent } from '@/types/event'
 import { SectionHeading } from './section-heading'
 import { Reveal } from './reveal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { uploadEventPhoto } from '@/services/photos'
 
 type Item = {
   id: string
   file: File
   url: string
   caption: string
+  status: 'queued' | 'uploading' | 'done' | 'error'
 }
 
-export function UploadMemories() {
+export function UploadMemories({ event }: { event: WeddingEvent }) {
   const [items, setItems] = useState<Item[]>([])
   const [guest, setGuest] = useState('')
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [done, setDone] = useState(false)
+  const [status, setStatus] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
 
@@ -41,6 +45,7 @@ export function UploadMemories() {
         file,
         url: URL.createObjectURL(file),
         caption: '',
+        status: 'queued' as const,
       })),
     ])
   }, [])
@@ -69,22 +74,61 @@ export function UploadMemories() {
       return
     }
     setUploading(true)
+    setDone(false)
     setProgress(0)
-    // Simulated upload — ready to connect to Supabase Storage later.
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(interval)
-          setUploading(false)
-          setDone(true)
-          items.forEach((i) => URL.revokeObjectURL(i.url))
-          setItems([])
-          toast.success('Thank you! Your memories have been shared.')
-          return 100
+    setStatus('Preparing uploads…')
+
+    void (async () => {
+      const totalBytes = items.reduce((sum, item) => sum + item.file.size, 0)
+      let completedBytes = 0
+
+      try {
+        for (const item of items) {
+          setStatus(`Uploading ${item.file.name}`)
+          setItems((current) =>
+            current.map((currentItem) =>
+              currentItem.id === item.id ? { ...currentItem, status: 'uploading' } : currentItem,
+            ),
+          )
+
+          await uploadEventPhoto({
+            eventId: event.id,
+            eventSlug: event.slug,
+            file: item.file,
+            caption: item.caption,
+            onProgress: (loaded) => {
+              setProgress(Math.round(((completedBytes + loaded) / totalBytes) * 100))
+            },
+          })
+
+          completedBytes += item.file.size
+          setProgress(Math.round((completedBytes / totalBytes) * 100))
+          setItems((current) =>
+            current.map((currentItem) =>
+              currentItem.id === item.id ? { ...currentItem, status: 'done' } : currentItem,
+            ),
+          )
         }
-        return p + 5
-      })
-    }, 80)
+
+        items.forEach((item) => URL.revokeObjectURL(item.url))
+        setItems([])
+        setDone(true)
+        setProgress(100)
+        setStatus('Upload complete')
+        toast.success('Thank you! Your memories have been shared.')
+      } catch (error) {
+        console.error(error)
+        setStatus('Upload failed')
+        setItems((current) =>
+          current.map((currentItem) =>
+            currentItem.status === 'uploading' ? { ...currentItem, status: 'error' } : currentItem,
+          ),
+        )
+        toast.error('We could not finish uploading your photos. Please try again.')
+      } finally {
+        setUploading(false)
+      }
+    })()
   }
 
   return (
@@ -198,6 +242,15 @@ export function UploadMemories() {
                           placeholder="Add a caption…"
                           className="h-9 rounded-lg text-sm"
                         />
+                        <p className="mt-1 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+                          {item.status === 'queued'
+                            ? 'Ready to upload'
+                            : item.status === 'uploading'
+                              ? 'Uploading'
+                              : item.status === 'done'
+                                ? 'Uploaded'
+                                : 'Upload failed'}
+                        </p>
                         <button
                           type="button"
                           onClick={() => removeItem(item.id)}
@@ -216,7 +269,7 @@ export function UploadMemories() {
               <div className="mt-6">
                 <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5">
-                    <Loader2 className="size-3.5 animate-spin" /> Uploading…
+                    <Loader2 className="size-3.5 animate-spin" /> {status || 'Uploading…'}
                   </span>
                   <span>{progress}%</span>
                 </div>
