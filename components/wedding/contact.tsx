@@ -13,7 +13,7 @@ const channels = [
   {
     icon: Mail,
     label: 'Email',
-    value: 'hello@aikoandelias.love',
+    value: 'lu@aikoandelias.love',
     href: 'mailto:hello@aikoandelias.love',
   },
   {
